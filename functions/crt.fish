@@ -1,46 +1,54 @@
-function __cert_help
+function __crt_help
 
     echo "fish-cert $__cert_version (https://github.com/holly/fish-cert/)
 
 Description:
 
-  aaa
+  Show domain remote certificate data function.
 
 Usage:
 
-  cert [options] domain
+  crt [options] domain
 
 Options:
 
- -A        exclude uppercase alphabets
- -0        exclude numbers
- -y        include symbols
- -B        exclude similar words (0,1,2,9,l,q,z,I,O,Z)
+  -O                        Write output to a file named as the \$domain.crt
+  -t, --text                Same as `openssl x509 -text -noout`
+  -h, --help                Show help message and quit
+  -H, --humanize            Show humanizable `openssl x509 -text -noout`
+  -J, --json                Show json output for humanize mode (require jq command)
+  --version                 Show version number and quit
 
 Example:
 
-  # default. length:12 number:45.  password composed of alphabets and numbers
-  > pwgen
-    ZXC6eFXKrmNhAao8        ZRYecI456CBxwDWT        9pxlOzR9oU1zz7GX        gLLrmWwnC7F3RvFZ        0Ajfn48z581o1dK2        TOb7PhsoeowW92ve
-    ytH789LpipKpAEeK        Iamy9WnjWyuYS7vP        1Xfti15drAo1NPG5        3uoy4712mRd4HJV9        ubYe1Vcgly7dmGj5        mCI1u9i3omZyEMSB
-    p6sItkZ40za3uDgj        6O4SSZSZztGJvUrG        IDv7sAO5gPJ2k9XZ        9CM1JEstjDJ4AMwG        XRGF72vB5khopmzi        VzNDcXi1UfMEY5rX
-    4hsAaoZ6uE9BX4KN        pcrdOSc1baDvwKy0        5UMOh4mStYGMTe3u        DMuf0lht2TvifCCP        yF301bnxLRxejsp4        Ub4H2AjTXVY2wDzG
-    lHZ6mmVEXlYUACKp        alVMT3cKcYXdWVgY        KjMMRyGKJA5etcRi        ptbM9Mdl4cOAfSsn        uSh9k2vp69ffNmWu        rc8lbMZjstwnBuRH
-    DbrjLeek1mglcWCP        tth0mYYkkaC10heM        hEhLSXv2ko84PIWN        nOyHsyRzBIHojXY2        pMsCkZv5Fo9p86z8        vlmXnhlKUssE2WI5
-    0ekFW5OuGUOtIsEZ        NYSY5Y6vnjiOmtiv        RieS8M9DPAvd9WSN        rj1a8HMCMrhRMfLY        iGx3tYNTsmb9H4rO        0s2JDGvJlGitePpf
+  # show pem
+  > crt github.com
+    -----BEGIN CERTIFICATE-----
+    MIIFajCCBPGgAwIBAgIQDNCovsYyz+ZF7KCpsIT7HDAKBggqhkjOPQQDAzBWMQsw
+    CQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMTAwLgYDVQQDEydEaWdp
+         .
+         .
+         .
+    3jSZCpwfqOHBdlxi9ASgKTU+wg0qw3FqtfQ31OwLYFdxh0MlNk/HwkjRSWgCMFbQ
+    vMkXEPvNvv4t30K6xtpG26qmZ+6OiISBIIXMljWnsiYR1gyZnTzIg3AQSw4Vmw==
+    -----END CERTIFICATE-----
 
-  # length:16 number:4 with symbols
-  > pwgen -y 16 4
-    jUPow8_j{ZX{1Mv.    LWkCN9Oos}!AYoV{    0Pa^W3S!a7>J5WSF    AjPp{M9+v;4wXkn6 
+  # output pem to `github.com.crt`
+  > crt -O github.com
+  > ls -lA github.com.crt
+    -rw-r--r-- 1 holly holly 1939 Jun  4 21:05 github.com.crt-
+
+  # output pem to `/path/to/server.crt`
+  > crt -o /path/to/server.crt github.com
 
 Copyright (C) 2023, holly.
 "
 end
 
-function cert
+function crt -d "Show domain remote certificate data function"
 
-    argparse -n cert -x "o,O,i,t" \
-        "v/version" "h/help" "O" "i/info" "t/text" "o/output="  -- $argv
+    argparse -n cert -x "O,H,t" \
+        "v/version" "h/help" "O" "H/humanize" "t/text"  -- $argv
     or return 1
 
     if set -lq _flag_version
@@ -49,61 +57,71 @@ function cert
     end
 
     if test -n "$_flag_h"
-        __cert_help
+        __crt_help
         return 0
     end
 
-    set -lq _flag_output or "/dev/stdout"
+    #set -lq _flag_output or "/dev/stdout"
 
     set -l domain $argv[1]
 
     if test -z "$domain"
-        set_color red; echo "Usage cert [options] domain."
+        set_color red; echo "Usage crt [options] domain."
         return 1
     end
 
-    if not __cert_available_443 $domain
-        set_color red; echo "$domain:$__cert_ssl_port is unreachable."
+    if not __crt_available_443 $domain
+        set_color red; echo "$domain:$__crt_ssl_port is unreachable."
         return 1
     end
 
-    set -l pem (__cert_pem_from_domain $domain | string collect)
+    set -l pem (__crt_pem_from_domain $domain | string collect)
 
     if test -z "$pem"
         set_color red; echo "$domain is parse certificate error."
         return 1
     end
 
+    set -l output
     if test -n "$_flag_O"
-        set  _flag_output "$domain.crt"
-    end
-
-    if string match -rq '^\-$' "$_flag_output" 
-       or test -z "$_flag_output"
-        set  _flag_output "/dev/stdout"
+        set output "$domain.crt"
     end
 
     begin
-        if test -n "$_flag_info"
-            set -l dict (__cert_pem2dict $pem)
+        if test -n "$_flag_humanize"
+            set -l dict (__crt_pem2dict $pem)
+            __crt_dict_pairs $dict | column -t -s(printf "\011")
         else if test -n "$_flag_text"
-            __cert_pem2text $pem
+            __crt_pem2text $pem
         else
-            echo $pem
+            if string length -- $output >/dev/null
+                echo $pem >$output
+            else
+                echo $pem
+            end
         end
-    end > $_flag_output
-    #__cert_pem2dict $pem
+    end 
 end
 
-function __cert_available_443
+function __crt_available_443
 
     set -l domain $argv[1]
-    nc -w $__cert_ssl_connect_timeout -z $domain $__cert_ssl_port
+    nc -w $__crt_ssl_connect_timeout -z $domain $__crt_ssl_port
     return $status
 end
 
+function __crt_dict_pairs
 
-function __cert_expiration_days
+    set -l last_idx (count $argv)
+    for i in (seq 1 2 $last_idx)
+
+        set -l v_idx (math "$i + 1")
+        printf "%s\t%s\n" $argv[$i] $argv[$v_idx]
+    end
+end
+
+
+function __crt_expiration_days
 
     set -l enddate $argv[1]
     set -l current_timestamp (date +%s)
@@ -111,19 +129,19 @@ function __cert_expiration_days
     math "($enddate_timestamp - $current_timestamp) / 60 / 60 / 24" | perl -nle 'print int($_)'
 end
 
-function __cert_ssl_client
+function __crt_ssl_client
 
     set -l domain $argv[1]
-    yes | openssl s_client -connect "$domain:$__cert_ssl_port" -tls1_2 -servername $domain 2>/dev/null
+    yes | openssl s_client -connect "$domain:$__crt_ssl_port" -tls1_2 -servername $domain 2>/dev/null
 end
 
-function __cert_pem2text
+function __crt_pem2text
 
     set -l pem $argv[1]
     echo "$pem" | openssl x509 -noout -text
 end
 
-function __cert_pem2dict
+function __crt_pem2dict
 
     set -l pem $argv[1]
 
@@ -138,20 +156,20 @@ function __cert_pem2dict
             string replace -ra 'issuer=C = .*, O = (.*), .*' '$1' $line
         end
         if string match -r "^notBefore=" $line >/dev/null
-            echo "start_date"
             set -l not_before (string replace 'notBefore=' '' $line)
+            echo "start_date"
             date --iso-8601=seconds -d "$not_before"
             echo "start_date_utc"
             date --iso-8601=seconds -u -d "$not_before"
         end
         if string match -r "^notAfter=" $line >/dev/null
-            echo "end_date"
             set -l not_after (string replace 'notAfter=' '' $line)
+            echo "end_date"
             date --iso-8601=seconds -d "$not_after"
             echo "end_date_utc"
             date --iso-8601=seconds -u -d "$not_after"
             echo "cert_expiration_days"
-            __cert_expiration_days "$not_after"
+            __crt_expiration_days "$not_after"
         end
         if string match -r "^subject=" $line >/dev/null
             echo "common_name"
@@ -163,11 +181,11 @@ function __cert_pem2dict
     echo "$pem" | openssl x509 -noout -ext subjectAltName | grep -A1 "X509v3 Subject Alternative Name:" | tail -1 | string replace ", " "," | string trim
 end
 
-function __cert_pem_from_domain
+function __crt_pem_from_domain
 
     set -l domain $argv[1]
     set -l cert_line 0
-    __cert_ssl_client $domain | while read line
+    __crt_ssl_client $domain | while read line
 
         if test $line = "-----BEGIN CERTIFICATE-----"
            set cert_line 1
