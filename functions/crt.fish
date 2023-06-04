@@ -16,7 +16,7 @@ Options:
   -t, --text                Same as `openssl x509 -text -noout`
   -h, --help                Show help message and quit
   -H, --humanize            Show humanize key/value pairs `openssl x509 -text -noout`
-  -J, --json                Show json output for humanize mode (require jq command)
+  -J, --json                Show json output for --humanize option (require jq command)
   --version                 Show version number and quit
 
 Example:
@@ -64,6 +64,9 @@ Example:
   end_date_utc               2024-03-14T23:59:59+00:00
   cert_expiration_days       284
   subject_alternative_names  DNS:github.com,DNS:www.github.com
+
+  add --json or -J option, key/value pairs output convert to json string
+
 
 Copyright (C) 2023, holly.
 "
