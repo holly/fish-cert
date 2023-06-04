@@ -1,6 +1,6 @@
 function __crt_help
 
-    echo "fish-cert $__cert_version (https://github.com/holly/fish-cert/)
+    echo "fish-cert $__crt_version (https://github.com/holly/fish-cert/)
 
 Description:
 
@@ -15,7 +15,7 @@ Options:
   -O                        Write output to a file named as the \$domain.crt
   -t, --text                Same as `openssl x509 -text -noout`
   -h, --help                Show help message and quit
-  -H, --humanize            Show humanizable `openssl x509 -text -noout`
+  -H, --humanize            Show humanize key/value pairs `openssl x509 -text -noout`
   -J, --json                Show json output for humanize mode (require jq command)
   --version                 Show version number and quit
 
@@ -38,8 +38,32 @@ Example:
   > ls -lA github.com.crt
     -rw-r--r-- 1 holly holly 1939 Jun  4 21:05 github.com.crt-
 
-  # output pem to `/path/to/server.crt`
-  > crt -o /path/to/server.crt github.com
+  # show `openssl x509 -text -noout` from pem
+  > crt --text github.com
+    Certificate:
+        Data:
+            Version: 3 (0x2)
+            Serial Number:
+               0c:d0:a8:be:c6:32:cf:e6:45:ec:a0:a9:b0:84:fb:1c
+            Signature Algorithm: ecdsa-with-SHA384
+            Issuer: C = US, O = DigiCert Inc, CN = DigiCert TLS Hybrid ECC SHA384 2020 CA1
+         .
+         .
+         .
+          30:64:02:30:04:dc:0d:d4:de:34:99:0a:9c:1f:a8:e1:c1:76:
+          5c:62:f4:04:a0:29:35:3e:c2:0d:2a:c3:71:6a:b5:f4:37:d4:
+
+  # show humanize key/value pairs `openssl x509 -text -noout`
+  > crt --humanize github.com
+  serial                     0CD0A8BEC632CFE645ECA0A9B084FB1C
+  issuer                     DigiCert Inc
+  common_name                github.com
+  start_date                 2023-02-14T09:00:00+09:00
+  start_date_utc             2023-02-14T00:00:00+00:00
+  end_date                   2024-03-15T08:59:59+09:00
+  end_date_utc               2024-03-14T23:59:59+00:00
+  cert_expiration_days       284
+  subject_alternative_names  DNS:github.com,DNS:www.github.com
 
 Copyright (C) 2023, holly.
 "
@@ -48,11 +72,11 @@ end
 function crt -d "Show domain remote certificate data function"
 
     argparse -n cert -x "O,H,t" \
-        "v/version" "h/help" "O" "H/humanize" "t/text"  -- $argv
+        "v/version" "h/help" "O" "H/humanize" "J/json" "t/text"  -- $argv
     or return 1
 
     if set -lq _flag_version
-        echo "fish-cert, version $__cert_version"
+        echo "fish-cert, version $__crt_version"
         return 0
     end
 
@@ -90,7 +114,11 @@ function crt -d "Show domain remote certificate data function"
     begin
         if test -n "$_flag_humanize"
             set -l dict (__crt_pem2dict $pem)
-            __crt_dict_pairs $dict | column -t -s(printf "\011")
+            if set -lq _flag_json
+                __crt_dict2json $dict | jq "."
+            else
+                __crt_dict_pairs $dict | column -t -s(printf "\011")
+            end
         else if test -n "$_flag_text"
             __crt_pem2text $pem
         else
@@ -140,6 +168,31 @@ function __crt_pem2text
     set -l pem $argv[1]
     echo "$pem" | openssl x509 -noout -text
 end
+
+
+function __crt_dict2json
+
+    set -l pairs
+    echo -n "{"
+    __crt_dict_pairs $argv | while read line
+        set -l pair
+        set -a pair (string split (printf "\011") $line)
+        set -l key $pair[1]
+        set -l value $pair[2]
+        if test $key = "subject_alternative_names"
+            set -l sans
+            string split "," $value | while read line
+                set -a sans "\"$line\""
+            end
+            set -a pairs (printf "\"%s\": [%s]" $key (string join "," $sans))
+        else
+            set -a pairs (printf "\"%s\": \"%s\"" $key $value)
+        end
+    end
+    string join "," $pairs
+    echo -n "}"
+end
+
 
 function __crt_pem2dict
 
