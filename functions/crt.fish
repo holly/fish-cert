@@ -16,7 +16,7 @@ Options:
   -t, --text                Same as `openssl x509 -text -noout`
   -h, --help                Show help message and quit
   -H, --humanize            Show humanize key/value pairs `openssl x509 -text -noout`
-  -J, --json                Show json output for --humanize option (require jq command)
+  -J, --json                Show key/value json output
   --version                 Show version number and quit
 
 Example:
@@ -74,7 +74,7 @@ end
 
 function crt -d "Show domain remote certificate data function"
 
-    argparse -n cert -x "O,H,t" \
+    argparse -n cert -x "O,H,J,t" \
         "v/version" "h/help" "O" "H/humanize" "J/json" "t/text"  -- $argv
     or return 1
 
@@ -117,11 +117,11 @@ function crt -d "Show domain remote certificate data function"
     begin
         if test -n "$_flag_humanize"
             set -l dict (__crt_pem2dict $pem)
-            if set -lq _flag_json
-                __crt_dict2json $dict | jq "."
-            else
-                __crt_dict_pairs $dict | column -t -s(printf "\011")
-            end
+            #__crt_dict_pairs $dict | column -t -s(printf "\011")
+            __crt_dict_pairs $dict | column -t -s\t
+        else if test -n "$_flag_json"
+            set -l dict (__crt_pem2dict $pem)
+            __crt_dict2json $dict
         else if test -n "$_flag_text"
             __crt_pem2text $pem
         else
@@ -209,7 +209,8 @@ function __crt_pem2dict
         end
         if string match -r "^issuer=" $line >/dev/null
             echo "issuer"
-            string replace -ra 'issuer=C = .*, O = (.*), .*' '$1' $line
+            string replace -ra 'issuer=C = .*, O = \"?([a-zA-Z0-9 \.\-,_]*)\"?, .*' '$1' $line
+            #string replace -a 'issuer=' '' $line | string replace -a '"' ''
         end
         if string match -r "^notBefore=" $line >/dev/null
             set -l not_before (string replace 'notBefore=' '' $line)
@@ -234,7 +235,7 @@ function __crt_pem2dict
     end
 
     echo "subject_alternative_names"
-    echo "$pem" | openssl x509 -noout -ext subjectAltName | grep -A1 "X509v3 Subject Alternative Name:" | tail -1 | string replace ", " "," | string trim
+    echo "$pem" | openssl x509 -noout -ext subjectAltName |  tail -1 | string replace -a ", " "," | string trim
 end
 
 function __crt_pem_from_domain
