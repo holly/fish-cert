@@ -207,8 +207,8 @@ function __crt_dict2json
             set -a pairs (printf "\"%s\": \"%s\"" $key $value)
         end
     end
-    string join "," $pairs
-    echo -n "}"
+    echo -n (string join "," $pairs)
+    echo "}"
 end
 
 
