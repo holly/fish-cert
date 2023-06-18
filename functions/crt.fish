@@ -4,7 +4,7 @@ function __crt_help
 
 Description:
 
-  Show domain remote certificate data function.
+  Website domain cert show/output function (openssl s_client and x509 wrapper)
 
 Usage:
 
