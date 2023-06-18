@@ -65,7 +65,22 @@ Example:
   cert_expiration_days       284
   subject_alternative_names  DNS:github.com,DNS:www.github.com
 
-  add --json or -J option, key/value pairs output convert to json string
+  # show json key/value output
+  > crt --json github.com | jq \".\"
+  {
+    \"serial\": \"0CD0A8BEC632CFE645ECA0A9B084FB1C\",
+    \"issuer\": \"DigiCert Inc\",
+    \"common_name\": \"github.com\",
+    \"start_date\": \"2023-02-14T09:00:00+09:00\",
+    \"start_date_utc\": \"2023-02-14T00:00:00+00:00\",
+    \"end_date\": \"2024-03-15T08:59:59+09:00\",
+    \"end_date_utc\": \"2024-03-14T23:59:59+00:00\",
+    \"cert_expiration_days\": \"270\",
+    \"subject_alternative_names\": [
+      \"DNS:github.com\",
+      \"DNS:www.github.com\"
+    ]
+  }
 
 
 Copyright (C) 2023, holly.
