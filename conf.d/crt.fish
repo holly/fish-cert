@@ -1,4 +1,4 @@
-set -g __crt_version               "v0.9"
+set -g __crt_version               "v1.0"
 set -g __crt_ssl_port              443
 set -g __crt_ssl_connect_timeout     3
 set -g __crt_require_commands     "openssl" "nc"
